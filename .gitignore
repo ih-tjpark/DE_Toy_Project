@@ -1,1 +1,2 @@
 review_data_save/*.parquet
+/data_extract/__pycache__
