@@ -22,7 +22,7 @@ def setup_driver() -> uc.Chrome:
     options.add_argument('user-agent=' + random_ua)
 
     return uc.Chrome(driver_executable_path='C:\\Users\\student\\AppData\\Roaming\\undetected_chromedriver\\undetected_chromedriver.exe',
-                     options=options, enable_cdp_events=True, incognito=True)
+                     options=options, enable_cdp_events=True, incognito=True )
 
 def check_element(xP: str, driver: uc.Chrome) -> bool:
     try:
@@ -37,7 +37,7 @@ def check_element_css(css: str, driver: uc.Chrome) -> bool:
         return False
 
 def get_product_code(url: str) -> str:
-    prod_code: str = url.split("products/")[-1].split("?")[0]
+    prod_code = url.split("products/")[-1].split("?")[0]
     return prod_code
 
 def get_star_rating(element: str) -> float: 
@@ -191,9 +191,12 @@ def get_coupang_review(product_url: str) -> None:
                     'review_date':review_date, 
                     'review_content':review_content
                     })
+            except NoSuchElementException:
+                print(f"[INFO] {product_code}리뷰가 없음:")
+                continue
             except Exception as e:
-                    print(f"[INFO] {product_code}리뷰 항목 추출 실패:", e)
-                    continue
+                print(f"[INFO] {product_code}리뷰 추출 실패:", e)
+                continue
             
             next_page_success = go_next_page(driver, p+1, review_id)
             if not next_page_success:
@@ -201,13 +204,12 @@ def get_coupang_review(product_url: str) -> None:
 
         save_reviews_to_parquet(product_list)
         print(f'[INFO] {product_code} 리뷰 추출을 완료했습니다.')
-        driver.quit()
     except Exception as e:
         print(f"[ERROR] {product_code} 에러 발생 :", e)
     finally:
         driver.quit()
 
-def get_product_links(keyword="청소기", max_links=10):
+def get_product_links(keyword="청소기", max_links=10) -> list:
 
     driver = setup_driver()
     search_url = f"https://www.coupang.com/np/search?component=&q={keyword}"

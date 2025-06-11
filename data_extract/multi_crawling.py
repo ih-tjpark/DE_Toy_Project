@@ -1,5 +1,5 @@
 from selenium_coupang import get_coupang_review, get_product_links
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, freeze_support
 
 
 def run_multi_process(url_list:list) -> None:
@@ -12,5 +12,6 @@ def run_multi_process(url_list:list) -> None:
 
 if __name__=="__main__":
     search_url = '청소기'
+    freeze_support() 
     product_link_list = get_product_links()
     run_multi_process(product_link_list)
