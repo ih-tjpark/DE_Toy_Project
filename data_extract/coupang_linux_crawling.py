@@ -12,6 +12,7 @@ def setup_driver() -> uc.Chrome:
     options = uc.ChromeOptions()
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-infobars")
+    options.add_argument("--headless=new")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--start-maximized")
@@ -21,9 +22,9 @@ def setup_driver() -> uc.Chrome:
     random_ua = UserAgent().random
     options.add_argument('user-agent=' + random_ua)
     
-
-    return uc.Chrome(driver_executable_path='C:\\Users\\student\\AppData\\Roaming\\undetected_chromedriver\\undetected_chromedriver.exe',
-                     options=options, enable_cdp_events=True, incognito=True )
+    driver = uc.Chrome(#driver_executable_path='C:\\Users\\student\\AppData\\Roaming\\undetected_chromedriver\\undetected_chromedriver.exe',
+                     options=options, enable_cdp_events=True, incognito=True, use_subprocess=False )
+    return driver
 
 def check_element(xP: str, driver: uc.Chrome) -> bool:
     try:
