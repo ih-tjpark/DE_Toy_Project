@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
 
-
+# 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
     options = uc.ChromeOptions()
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -26,31 +26,37 @@ def setup_driver() -> uc.Chrome:
                      options=options, enable_cdp_events=True, incognito=True, use_subprocess=False )
     return driver
 
+# xpath로 element 있는지 체크
 def check_element(xP: str, driver: uc.Chrome) -> bool:
     try:
         return driver.find_element(By.XPATH, xP).is_enabled()
     except:
         return False
 
+# css로 element 있는지 체크
 def check_element_css(css: str, driver: uc.Chrome) -> bool:
     try:
         return driver.find_element(By.CSS_SELECTOR, css).is_enabled()
     except:
         return False
 
+# 상품 코드 추출
 def get_product_code(url: str) -> str:
     prod_code = url.split("products/")[-1].split("?")[0]
     return prod_code
 
+# 별점 추출
 def get_star_rating(element: str) -> float: 
     rating_percent = float(re.sub(r'[^0-9]', '', element))
     avg_rating = round((rating_percent / 20), 2) 
     return avg_rating
 
-def get_review_count(element: str) -> int:
-    review_count = int(re.sub(r'[^0-9]', '', element))
-    return review_count
+# 문자열에서 숫자 추출
+def get_num_in_str(element: str) -> int:
+    num = int(re.sub(r'[^0-9]', '', element))
+    return num
 
+# 리뷰 페이지 버튼 동작 컨트롤
 def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
     try:
         if review_id == "sdpReview":
@@ -73,13 +79,15 @@ def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
     except:
         #print(f"[INFO] 리뷰 {page_num-1} 페이지 버튼 없음.")
         return False
-    
+
+# 리뷰 저장 
 def save_reviews_to_parquet(reviews: list, product_code: str) -> None:
     df = pd.DataFrame(reviews)
     file_path = f"DE_Toy_Project/review_data_save/coupang_review_{product_code}.parquet"
     df.to_parquet(file_path, engine="pyarrow", index=False)
     #print(f"[INFO] {product_code} 리뷰가 parquet 파일로 저장되었습니다")
 
+# 상품 기본 정보 추출
 def get_product_info(driver: uc.Chrome) -> dict:
     try:
         product_dict = dict()
@@ -128,7 +136,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
         # 리뷰 수 추출
         try:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-count-txt').text
-            review_count = get_review_count(el)
+            review_count = get_num_in_str(el)
             product_dict['review_count'] = review_count
             #print('review_count:',review_count)
         except NoSuchElementException as e:
@@ -152,27 +160,17 @@ def get_product_info(driver: uc.Chrome) -> dict:
             sales_price = ''
             print("[INFO] 할인 후 가격 없음")
         
-        # DB에 저장할 dict
-        #print(product_dict)
         return product_dict
     except Exception as e:
         print(f"[ERROR] {product_code} 상품 기본 정보 추출 실패:",e)
         #driver.quit()
         return product_dict
 
-
-def get_coupang_review(product_url: str) -> None:
+# 상품 리뷰 추출
+def get_product_review(driver: uc.Chrome, product_code):
     try:
-        driver = setup_driver()
-        driver.get(product_url)
-        time.sleep(random.uniform(5, 6))
-
-        # 상품 기본 정보 추출
-        product_dict = get_product_info(driver)
-        product_code = product_dict['product_code']
-        # 기본 정보 DB 저장
         print(f"[INFO] {product_code}리뷰 크롤링을 시작합니다.")
-        print(driver.current_url)
+
         # 리뷰 추출
         if check_element_css("#sdpReview article", driver):
             review_id = "sdpReview"
@@ -206,7 +204,29 @@ def get_coupang_review(product_url: str) -> None:
             next_page_success = go_next_page(driver, p+1, review_id)
             if not next_page_success:
                 break
+        return product_list
+    except:
+        print(f"[ERROR] {product_code} 리뷰 추출 실패 :", e)
+        return product_list
 
+# 쿠팡 크롤링 전체 파이프라인 
+def coupang_crawling(product_url: str) -> None:
+    try:
+        driver = setup_driver()
+        driver.get(product_url)
+        time.sleep(random.uniform(5, 6))
+
+        # 상품 기본 정보 추출
+        product_dict = get_product_info(driver)
+        product_code = product_dict['product_code']
+        
+        # 기본 정보 DB 저장
+        # save_to_db(product_dict)
+        
+        # 상품 리뷰 추출
+        product_list = get_product_review(driver, product_code)
+        
+        # 리뷰 저장
         save_reviews_to_parquet(product_list, product_code)
         print(f'[INFO] {product_code} 리뷰 추출을 완료했습니다.')
     except Exception as e:
@@ -215,6 +235,7 @@ def get_coupang_review(product_url: str) -> None:
         driver.quit()
         return
 
+# 쿠팡 검색 후 상품 url 추출 
 def get_product_links(keyword: str, max_links: int) -> list:
 
     driver = setup_driver()
@@ -224,6 +245,7 @@ def get_product_links(keyword: str, max_links: int) -> list:
 
     links = []
     duplicate_chk = set()
+    print(driver.page_source)
     try:
         items = driver.find_elements(By.CSS_SELECTOR, '#product-list li')
     except NoSuchElementException as e:
@@ -238,6 +260,8 @@ def get_product_links(keyword: str, max_links: int) -> list:
 
             # 상품 코드 추출
             product_code = get_product_code(href)
+
+            # 중복 확인
             if product_code in duplicate_chk:
                 continue
             else:
@@ -272,13 +296,6 @@ def get_product_links(keyword: str, max_links: int) -> list:
             if review_count >= 200:
                 links.append(href)
             
-            # print('title:',title)
-            # print('href:',href)
-            # print('img:',img)
-            # print('price:',price)
-            # print('origin_price:',origin_price)
-            # print('star_rating:',star_rating)
-            # print('review_count:',review_count)
             if len(links) >= max_links:
                 break
         print(f"[INFO] {len(links)}개 상품 url 추출 완료.")        
@@ -290,8 +307,10 @@ def get_product_links(keyword: str, max_links: int) -> list:
     finally:
         driver.quit()
 
+
 if __name__ == "__main__":
-    product_url = ''
-    product_url_list = get_product_links()
-    get_coupang_review(product_url_list[0])
+    keyword = '청소기'
+    max_links = 10
+    product_url_list = get_product_links(keyword, max_links)
+    coupang_crawling(product_url_list[0])
 
