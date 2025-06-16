@@ -1,2 +1,4 @@
 review_data_save/*.parquet
+product_info_data/*.csv
 /data_extract/__pycache__
+.DS_Store

@@ -1,4 +1,6 @@
 import re
+import os
+import csv
 import time
 import random
 import pandas as pd
@@ -81,10 +83,27 @@ def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
 
 # 리뷰 저장 
 def save_reviews_to_parquet(reviews: list, product_code: str) -> None:
+    dir_name = './review_data'
+    
+    if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
     df = pd.DataFrame(reviews)
-    file_path = f"DE_Toy_Project/review_data_save/coupang_review_{product_code}.parquet"
+    file_path = f"review_data/coupang_review_{product_code}.parquet"
     df.to_parquet(file_path, engine="pyarrow", index=False)
     #print(f"[INFO] {product_code} 리뷰가 parquet 파일로 저장되었습니다")
+
+def save_product_info_to_csv(product_dict:dict) -> None:
+    dir_name = './product_info_data'
+    
+    if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+    fieldnames = list(product_dict.keys())
+    print(fieldnames)
+    filepath = os.path.join(dir_name, product_dict["product_code"]+'.csv')
+    with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()           
+        writer.writerow(product_dict)        
 
 # 상품 기본 정보 추출
 def get_product_info(driver: uc.Chrome) -> dict:
@@ -218,7 +237,9 @@ def coupang_crawling(product_url: str) -> None:
         # 상품 기본 정보 추출
         product_dict = get_product_info(driver)
         product_code = product_dict['product_code']
-        
+        print(product_dict.keys())
+        # 로컬에 csv 저장
+        save_product_info_to_csv(product_dict)
         # 기본 정보 DB 저장
         # save_to_db(product_dict)
         
@@ -244,7 +265,6 @@ def get_product_links(keyword: str, max_links: int) -> list:
 
     links = []
     duplicate_chk = set()
-    print(driver.page_source)
     try:
         items = driver.find_elements(By.CSS_SELECTOR, '#product-list li')
     except NoSuchElementException as e:
@@ -287,7 +307,7 @@ def get_product_links(keyword: str, max_links: int) -> list:
             # except NoSuchElementException:
             #     star_rating = 0
             try:
-                review_count = get_review_count(product_info[1].text)
+                review_count = get_num_in_str(product_info[1].text)
             except:
                 review_count = 0
             
