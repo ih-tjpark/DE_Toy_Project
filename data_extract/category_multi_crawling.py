@@ -12,7 +12,7 @@ def run_multi_process(url_list: list) -> None:
 
 if __name__=="__main__":
     keyword = input("크롤링할 카테고리를 입력하세요: ")
-    max_link = 2
+    max_link = 10
     freeze_support()
     product_link_list = get_product_links(keyword, max_link)
     run_multi_process(product_link_list)
