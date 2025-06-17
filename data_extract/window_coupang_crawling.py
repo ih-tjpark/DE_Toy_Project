@@ -57,6 +57,11 @@ def get_num_in_str(element: str) -> int:
     num = int(re.sub(r'[^0-9]', '', element))
     return num
 
+# img url에서 사이즈 변경
+def replace_thumbnail_size(url: str) -> str:
+    
+    return re.sub(r'/remote/[^/]+/image', '/remote/292x292ex/image', url)
+
 # 리뷰 페이지 버튼 동작 컨트롤
 def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
     try:
@@ -97,9 +102,13 @@ def save_product_info_to_csv(product_dict:dict) -> None:
     
     if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-    fieldnames = list(product_dict.keys())
 
-    filepath = os.path.join(dir_name, product_dict["product_code"]+'.csv')
+    product_code = str(product_dict["product_code"])
+    product_dict["id"] = product_dict["product_code"]
+    product_dict.pop("product_code")
+    fieldnames = list(product_dict.keys())
+    filepath = os.path.join(dir_name, product_code+'.csv')
+
     with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()           
@@ -109,46 +118,44 @@ def save_product_info_to_csv(product_dict:dict) -> None:
 def get_product_info(driver: uc.Chrome) -> dict:
     try:
         product_dict = dict()
-        
+
         # 상품 판매 제목
         title = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductTitle"]').text
-        product_dict['id'] = title
+        #product_dict['title'] = title
 
+        # 이미지 주소
         image_url = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductImage"] img').get_attribute('src')
-        product_dict['image_url'] = image_url
+        #image_url = driver.find_element(By.CSS_SELECTOR,'div.swiper-slide img' ).get_attribute('src')
+        product_dict['image_url'] = replace_thumbnail_size(image_url)
 
-        # 카테고리 추출
+        # 카테고리
         try:
             categorys = driver.find_elements(By.CSS_SELECTOR, '[data-sentry-component="Breadcrumb"] a')
             category_list = []
             for i in range(1, len(categorys)):
                 category_list.append(categorys[i].text) 
-                #product_dict[f'category{i}'] = categorys[i].text
-                #print('category:',categorys[i].text)
             
-            category_str = '[' + ', '.join(category_list) + ']'
-        
+            category_str = ','.join(category_list)
+            product_dict['tag'] = category_str
         except NoSuchElementException as e:
             print("[ERROR] 카테고리 추출 실패:",e)
-        
-        # 상품명 추출
+
+        # 상품명
         try:
             name = driver.find_element(By.CSS_SELECTOR, '#itemBrief > table > tbody > tr:nth-child(1) > td:nth-child(2)').text
-            if "상품" == product_dict['name'][:2]:
+            if "상품" == name[:2]:
                 product_dict['name'] = title
             else:
                 product_dict['name'] = name
-            #print('name:', name)
         except NoSuchElementException as e:
             name = ''
             print("[ERROR] 상품명 추출 실패:",e)
-
-        # 상품 코드 추출
+        # 상품 코드
         product_code = get_product_code(driver.current_url)
-        product_dict['product_code'] = int(product_code)    
+        product_dict['product_code'] = int(product_code) 
         #print(product_code)
 
-        # 별점 추출
+        # 별점
         try:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-star-num').get_attribute("style")
             star_rating = get_star_rating(el)
@@ -157,8 +164,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
         except NoSuchElementException as e:
             star_rating = 0.0
             print("[INFO] 별점 없음")
-
-        # 리뷰 수 추출
+        # 리뷰 수
         try:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-count-txt').text
             review_count = get_num_in_str(el)
@@ -167,24 +173,22 @@ def get_product_info(driver: uc.Chrome) -> dict:
         except NoSuchElementException as e:
             review_count = 0
             print("[INFO] 리뷰 수 없음")
-
-        # 할인 전 가격 추출
-        try:
-            sales_price = driver.find_element(By.CSS_SELECTOR, 'div.price-amount.sales-price-amount').text
-            product_dict['sales_price'] = get_num_in_str(sales_price)
-            #print('sales_price:',sales_price)
-        except NoSuchElementException as e:
-            product_dict['sales_price'] = 0
-            print("[INFO] 할인 전 가격 없음")
-        # 할인 후 가격 추출
+        # 할인 전 가격
+        # try:
+        #     sales_price = driver.find_element(By.CSS_SELECTOR, 'div.price-amount.sales-price-amount').text
+        #     product_dict['sales_price'] = get_num_in_str(sales_price)
+        #     #print('sales_price:',sales_price)
+        # except NoSuchElementException as e:
+        #     product_dict['sales_price'] = 0
+        #     print("[INFO] 할인 전 가격 없음")
+        # 할인 후 가격
         try:
             final_price = driver.find_element(By.CSS_SELECTOR, 'div.price-amount.final-price-amount').text
-            product_dict['final_price'] = get_num_in_str(final_price)
+            product_dict['price'] = get_num_in_str(final_price)
             #print('final_price:',final_price)
         except NoSuchElementException as e:
-            product_dict['final_price'] = 0
+            product_dict['price'] = 0
             print("[INFO] 할인 후 가격 없음")
-        
         return product_dict
     except Exception as e:
         print(f"[ERROR] {product_code} 상품 기본 정보 추출 실패:",e)
@@ -230,7 +234,7 @@ def get_product_review(driver: uc.Chrome, product_code):
             if not next_page_success:
                 break
         return product_list
-    except:
+    except Exception as e:
         print(f"[ERROR] {product_code} 리뷰 추출 실패 :", e)
         return product_list
 
@@ -243,7 +247,7 @@ def coupang_crawling(product_url: str) -> None:
 
         # 상품 기본 정보 추출
         product_dict = get_product_info(driver)
-        product_code = product_dict['product_code']
+        product_code = str(product_dict['product_code'])
 
         # 로컬에 csv 저장
         save_product_info_to_csv(product_dict)

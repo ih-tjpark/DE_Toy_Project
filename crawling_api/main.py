@@ -45,6 +45,7 @@ def start_crawling(req: CrawlRequest):
             if status.value == True:
                 return {"status": "processing", "message": "작업이 이미 실행 중입니다."}
         except NameError:
+            # 처음 실행 시 멀티 프로세싱 간 공유 변수 생성
             manager = Manager()
             status = manager.Value('b', False) # type: ignore
             product_info_dict : dict = manager.dict() # type: ignore
