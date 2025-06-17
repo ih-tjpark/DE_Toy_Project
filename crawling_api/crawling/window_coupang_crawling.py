@@ -4,10 +4,12 @@ import csv
 import time
 import random
 import pandas as pd
+import psycopg2
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
+from crawling.save_data import insert_product_info
 
 # 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
@@ -99,7 +101,7 @@ def save_product_info_to_csv(product_dict:dict) -> None:
             os.makedirs(dir_name)
     fieldnames = list(product_dict.keys())
 
-    filepath = os.path.join(dir_name, product_dict["product_code"]+'.csv')
+    filepath = os.path.join(dir_name, str(product_dict["product_code"])+'.csv')
     with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()           
@@ -111,11 +113,13 @@ def get_product_info(driver: uc.Chrome) -> dict:
         product_dict = dict()
         
         # 상품 판매 제목
+        
         title = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductTitle"]').text
-        product_dict['id'] = title
+        product_dict['title'] = title
 
         image_url = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductImage"] img').get_attribute('src')
         product_dict['image_url'] = image_url
+
 
         # 카테고리 추출
         try:
@@ -127,33 +131,29 @@ def get_product_info(driver: uc.Chrome) -> dict:
                 #print('category:',categorys[i].text)
             
             category_str = '[' + ', '.join(category_list) + ']'
-        
-        except NoSuchElementException as e:
+        except Exception as e:
             print("[ERROR] 카테고리 추출 실패:",e)
         
         # 상품명 추출
         try:
             name = driver.find_element(By.CSS_SELECTOR, '#itemBrief > table > tbody > tr:nth-child(1) > td:nth-child(2)').text
-            if "상품" == product_dict['name'][:2]:
-                product_dict['name'] = title
-            else:
-                product_dict['name'] = name
+            product_dict['name'] = str(category_str + name)
             #print('name:', name)
         except NoSuchElementException as e:
             name = ''
             print("[ERROR] 상품명 추출 실패:",e)
-
+        
         # 상품 코드 추출
         product_code = get_product_code(driver.current_url)
-        product_dict['product_code'] = int(product_code)    
-        #print(product_code)
+        product_dict['product_code'] = int(product_code[:6])
+        print(product_code)
 
         # 별점 추출
         try:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-star-num').get_attribute("style")
             star_rating = get_star_rating(el)
             product_dict['star_rating'] = star_rating
-            #print(star_rating)
+            print(star_rating)
         except NoSuchElementException as e:
             star_rating = 0.0
             print("[INFO] 별점 없음")
@@ -163,9 +163,9 @@ def get_product_info(driver: uc.Chrome) -> dict:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-count-txt').text
             review_count = get_num_in_str(el)
             product_dict['review_count'] = review_count
-            #print('review_count:',review_count)
+            print('review_count:',review_count)
         except NoSuchElementException as e:
-            review_count = 0
+            review_count = ''
             print("[INFO] 리뷰 수 없음")
 
         # 할인 전 가격 추출
@@ -175,16 +175,20 @@ def get_product_info(driver: uc.Chrome) -> dict:
             #print('sales_price:',sales_price)
         except NoSuchElementException as e:
             product_dict['sales_price'] = 0
+        except ValueError:
+            product_dict['sales_price'] = 0
             print("[INFO] 할인 전 가격 없음")
         # 할인 후 가격 추출
         try:
             final_price = driver.find_element(By.CSS_SELECTOR, 'div.price-amount.final-price-amount').text
             product_dict['final_price'] = get_num_in_str(final_price)
-            #print('final_price:',final_price)
+            print('final_price:',product_dict['final_price'])
         except NoSuchElementException as e:
             product_dict['final_price'] = 0
+        except ValueError:
+            product_dict['final_price'] = 0
             print("[INFO] 할인 후 가격 없음")
-        
+        print(product_dict)
         return product_dict
     except Exception as e:
         print(f"[ERROR] {product_code} 상품 기본 정보 추출 실패:",e)
@@ -229,11 +233,14 @@ def get_product_review(driver: uc.Chrome, product_code):
             next_page_success = go_next_page(driver, p+1, review_id)
             if not next_page_success:
                 break
+        print("기본정보 추출 완료")
         return product_list
     except:
         print(f"[ERROR] {product_code} 리뷰 추출 실패 :", e)
         return product_list
-
+def print_dict_types(d):
+    for key, value in d.items():
+        print(f"key: {key} ({type(key).__name__}), value: {value} ({type(value).__name__})")
 # 쿠팡 크롤링 전체 파이프라인 
 def coupang_crawling(product_url: str) -> None:
     try:
@@ -243,12 +250,20 @@ def coupang_crawling(product_url: str) -> None:
 
         # 상품 기본 정보 추출
         product_dict = get_product_info(driver)
-        product_code = product_dict['product_code']
-
+        product_code = str(product_dict['product_code'])
+        print_dict_types(product_dict)
         # 로컬에 csv 저장
         save_product_info_to_csv(product_dict)
         # 기본 정보 DB 저장
         # save_to_db(product_dict)
+        conn = psycopg2.connect(
+            host="10.128.0.22",
+            dbname="postgres",
+            user="postgres",
+            password="todn12",
+            port=5432
+        )
+        insert_product_info(conn,product_dict)
         
         # 상품 리뷰 추출
         product_list = get_product_review(driver, product_code)
@@ -333,9 +348,9 @@ def get_product_links(keyword: str, max_links: int) -> list:
     finally:
         driver.quit()
 
-if __name__ == "__main__":
-    keyword = '청소기'
-    max_links = 10
-    product_url_list = get_product_links(keyword, max_links)
-    coupang_crawling(product_url_list[0])
+# if __name__ == "__main__":
+#     keyword = '청소기'
+#     max_links = 10
+#     product_url_list = get_product_links(keyword, max_links)
+#     coupang_crawling(product_url_list[0])
 

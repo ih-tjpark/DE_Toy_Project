@@ -13,6 +13,6 @@ def run_multi_process(url_list: list) -> None:
 if __name__=="__main__":
     search_url = '청소기'
     max_link = 10
-    freeze_support() 
+    freeze_support()
     product_link_list = get_product_links(search_url, max_link)
     run_multi_process(product_link_list)
