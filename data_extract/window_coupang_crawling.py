@@ -24,7 +24,7 @@ def setup_driver() -> uc.Chrome:
     options.add_argument('user-agent=' + random_ua)
     
 
-    return uc.Chrome(#driver_executable_path='C:\\Users\\student\\AppData\\Roaming\\undetected_chromedriver\\undetected_chromedriver.exe',
+    return uc.Chrome(driver_executable_path='C:\\Users\\student\\AppData\\Roaming\\undetected_chromedriver\\undetected_chromedriver.exe',
                      options=options, enable_cdp_events=True, incognito=True )
 
 # xpath로 element 있는지 체크
