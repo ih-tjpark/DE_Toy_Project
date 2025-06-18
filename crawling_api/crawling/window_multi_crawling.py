@@ -8,7 +8,7 @@ def run_multi_process(url_list: list) -> None:
     with Pool(processes=cpu_count()//2) as pool:
         pool.map(coupang_crawling, url_list)
 
-def crawling_start(product_name: str, max_link: int, shared_dict: dict) -> None:
+def crawling_start(product_name: str, max_link: int) -> None:
     freeze_support()
     product_link_list = get_product_links(product_name, max_link)
     run_multi_process(product_link_list)

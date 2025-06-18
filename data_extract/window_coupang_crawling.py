@@ -29,17 +29,14 @@ def setup_driver() -> uc.Chrome:
 
 # xpath로 element 있는지 체크
 def check_element(xP: str, driver: uc.Chrome) -> bool:
-    try:
-        return driver.find_element(By.XPATH, xP).is_enabled()
-    except:
-        return False
+    
+    return driver.find_element(By.XPATH, xP).is_enabled()
 
 # css로 element 있는지 체크
 def check_element_css(css: str, driver: uc.Chrome) -> bool:
-    try:
-        return driver.find_element(By.CSS_SELECTOR, css).is_enabled()
-    except:
-        return False
+    
+    return driver.find_element(By.CSS_SELECTOR, css).is_enabled()
+    
 
 # 상품 코드 추출
 def get_product_code(url: str) -> str:
@@ -73,16 +70,21 @@ def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
         # 처음 페이지 버튼을 누를 시 화면에 노출되야 클릭됨
         if page_num <= 3:
             driver.execute_script("arguments[0].scrollIntoView(true);", page_buttons)
-            time.sleep(0.5)
+            time.sleep(random.uniform(0.5, 1))
             driver.execute_script("window.scrollBy(0, -150);")  # 살짝 위로 올려줌
-            time.sleep(0.5)
+            time.sleep(random.uniform(0.5, 1))
 
         page_buttons.click()                               
-        time.sleep(random.uniform(2,3))
+        time.sleep(random.uniform(2.5,3))
         #print(f"[INFO] {product_code} 리뷰 {page_num-1} 페이지 이동")
         return True
-    
-    except:
+    except NoSuchElementException as e:
+        print("[INFO] 리뷰 마지막 페이지입니다.")
+        #print(f"[INFO] 리뷰 {page_num-1} 페이지 버튼 없음.")
+        return False
+
+    except Exception as e:
+        print("[INFO] 리뷰 페이지 버튼 클릭할 수 없음:", e)
         #print(f"[INFO] 리뷰 {page_num-1} 페이지 버튼 없음.")
         return False
 
@@ -124,8 +126,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
         #product_dict['title'] = title
 
         # 이미지 주소
-        image_url = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductImage"] img').get_attribute('src')
-        #image_url = driver.find_element(By.CSS_SELECTOR,'div.swiper-slide img' ).get_attribute('src')
+        image_url = driver.find_element(By.CSS_SELECTOR, '[data-senctry-component="ProductImage"] img').get_attribute('src')
         product_dict['image_url'] = replace_thumbnail_size(image_url)
 
         # 카테고리
@@ -207,7 +208,7 @@ def get_product_review(driver: uc.Chrome, product_code):
             review_id = "btfTab"
 
         product_list = []
-        for p in range(2,10):
+        for p in range(2,13):
             try:
                 articles = driver.find_elements(By.CSS_SELECTOR, f"#{review_id} article")
 
@@ -217,12 +218,12 @@ def get_product_review(driver: uc.Chrome, product_code):
                     review_content = article.find_element(By.CSS_SELECTOR, 'div.sdp-review__article__list__review__content').text
                     #print(f" 별점:{rating} /  등록 날짜:{date} / 내용: {content[:50]}")
                 
-                product_list.append({
-                    'product_code':product_code, 
-                    'review_rating':review_rating, 
-                    'review_date':review_date, 
-                    'review_content':review_content
-                    })
+                    product_list.append({
+                        'product_code':product_code, 
+                        'review_rating':review_rating, 
+                        'review_date':review_date, 
+                        'review_content':review_content
+                        })
             except NoSuchElementException:
                 print(f"[INFO] {product_code}리뷰가 없음:")
                 continue
@@ -310,7 +311,7 @@ def get_product_links(keyword: str, max_links: int) -> list:
             # 상품 별점, 리뷰 수
             try:
                 product_info = item.find_elements(By.CSS_SELECTOR, '[data-sentry-component="ProductRating"] span')
-            except NoSuchElementException:
+            except NoSuchElementException as e:
                 star_rating = 0
                 review_count = 0
             # try:

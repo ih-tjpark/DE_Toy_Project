@@ -146,14 +146,14 @@ def get_product_info(driver: uc.Chrome) -> dict:
         # 상품 코드 추출
         product_code = get_product_code(driver.current_url)
         product_dict['product_code'] = int(product_code[:6])
-        print(product_code)
+
 
         # 별점 추출
         try:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-star-num').get_attribute("style")
             star_rating = get_star_rating(el)
             product_dict['star_rating'] = star_rating
-            print(star_rating)
+            #print(star_rating)
         except NoSuchElementException as e:
             star_rating = 0.0
             print("[INFO] 별점 없음")
@@ -163,7 +163,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
             el = driver.find_element(By.CSS_SELECTOR, 'span.rating-count-txt').text
             review_count = get_num_in_str(el)
             product_dict['review_count'] = review_count
-            print('review_count:',review_count)
+            #print('review_count:',review_count)
         except NoSuchElementException as e:
             review_count = ''
             print("[INFO] 리뷰 수 없음")
@@ -182,13 +182,13 @@ def get_product_info(driver: uc.Chrome) -> dict:
         try:
             final_price = driver.find_element(By.CSS_SELECTOR, 'div.price-amount.final-price-amount').text
             product_dict['final_price'] = get_num_in_str(final_price)
-            print('final_price:',product_dict['final_price'])
+            #print('final_price:',product_dict['final_price'])
         except NoSuchElementException as e:
             product_dict['final_price'] = 0
         except ValueError:
             product_dict['final_price'] = 0
             print("[INFO] 할인 후 가격 없음")
-        print(product_dict)
+
         return product_dict
     except Exception as e:
         print(f"[ERROR] {product_code} 상품 기본 정보 추출 실패:",e)
@@ -207,7 +207,7 @@ def get_product_review(driver: uc.Chrome, product_code):
             review_id = "btfTab"
 
         product_list = []
-        for p in range(2,10):
+        for p in range(2,12):
             try:
                 articles = driver.find_elements(By.CSS_SELECTOR, f"#{review_id} article")
 
@@ -217,12 +217,12 @@ def get_product_review(driver: uc.Chrome, product_code):
                     review_content = article.find_element(By.CSS_SELECTOR, 'div.sdp-review__article__list__review__content').text
                     #print(f" 별점:{rating} /  등록 날짜:{date} / 내용: {content[:50]}")
                 
-                product_list.append({
-                    'product_code':product_code, 
-                    'review_rating':review_rating, 
-                    'review_date':review_date, 
-                    'review_content':review_content
-                    })
+                    product_list.append({
+                        'product_code':product_code, 
+                        'review_rating':review_rating, 
+                        'review_date':review_date, 
+                        'review_content':review_content
+                        })
             except NoSuchElementException:
                 print(f"[INFO] {product_code}리뷰가 없음:")
                 continue
@@ -238,9 +238,7 @@ def get_product_review(driver: uc.Chrome, product_code):
     except:
         print(f"[ERROR] {product_code} 리뷰 추출 실패 :", e)
         return product_list
-def print_dict_types(d):
-    for key, value in d.items():
-        print(f"key: {key} ({type(key).__name__}), value: {value} ({type(value).__name__})")
+
 # 쿠팡 크롤링 전체 파이프라인 
 def coupang_crawling(product_url: str) -> None:
     try:
@@ -251,7 +249,7 @@ def coupang_crawling(product_url: str) -> None:
         # 상품 기본 정보 추출
         product_dict = get_product_info(driver)
         product_code = str(product_dict['product_code'])
-        print_dict_types(product_dict)
+
         # 로컬에 csv 저장
         save_product_info_to_csv(product_dict)
         # 기본 정보 DB 저장
