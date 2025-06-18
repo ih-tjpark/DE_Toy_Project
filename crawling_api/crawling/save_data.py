@@ -1,25 +1,43 @@
 import pandas as pd
 import psycopg2
-#from google.cloud import storage
+from google.cloud import storage
+from datetime import datetime
+import pandas as pd
+import os
+
+
+# cloud storage 저장
+"""
+    GCS에 파일 업로드 함수
+    - bucket_name: GCS 버킷 이름
+    - source_file_path: 로컬 파일 경로
+    - destination_blob_name: GCS 버킷 내 저장 경로
+"""
+def upload_parquet_to_gcs(df_list: list, keyword, product_code): 
+    # 날짜 기준 폴더명 생성
+    today = datetime.today().strftime("%Y-%m-%d")
+
+    # 목적지 경로 구성: 날짜/검색어/review_상품코드.parquet
+    local_path = f"review_data/{today}/{keyword}/"
+    destination_blob_name = f"{local_path}/review_{product_code}.parquet"
+
+    # 로컬 임시 파일로 저장
+    if not os.path.exists(local_path):
+            os.makedirs(local_path)
+    df = pd.DataFrame(df_list)
+    df.to_parquet(destination_blob_name, engine="pyarrow", index=False)
+
+    # GCS에 업로드
+    storage_client = storage.Client()
+    bucket = storage_client.bucket('kosa-semi-datalake')
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(local_path)
+
+    print(f"[INFO] GCS에 저장 완료: gs://kosa-semi-datalake/{destination_blob_name}")
 
 
 
-# def upload_parquet_to_gcs(df: pd.DataFrame, bucket_name: str, destination_blob_name: str):
-#     # 로컬 임시 파일로 저장
-#     local_path = f"/tmp/{destination_blob_name}"
-#     df.to_parquet(local_path, engine="pyarrow", index=False)
-
-#     # GCS에 업로드
-#     storage_client = storage.Client()
-#     bucket = storage_client.bucket(bucket_name)
-#     blob = bucket.blob(destination_blob_name)
-#     blob.upload_from_filename(local_path)
-
-#     print(f"[INFO] GCS에 저장 완료: gs://{bucket_name}/{destination_blob_name}")
-
-
-
-
+# db 저장
 def insert_product_info_to_db(product: dict):
     
     conn = psycopg2.connect(

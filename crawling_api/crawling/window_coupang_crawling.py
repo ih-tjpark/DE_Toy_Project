@@ -9,7 +9,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
-from crawling.save_data import insert_product_info_to_db
+from crawling.save_data import insert_product_info_to_db, upload_parquet_to_gcs
 
 # 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
@@ -266,7 +266,8 @@ def coupang_crawling(product_url: str) -> None:
         product_list = get_product_review(driver, product_code)
         
         # 리뷰 저장
-        save_reviews_to_parquet(product_list, product_code)
+        upload_parquet_to_gcs(product_list,product_code)
+        #save_reviews_to_parquet(product_list, product_code)
         print(f'[INFO] {product_code} 리뷰 추출을 완료했습니다.')
     except Exception as e:
         print(f"[ERROR] {product_code} 에러 발생 :", e)
