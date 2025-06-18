@@ -1,6 +1,7 @@
 review_data/*.parquet
 product_info_data/*.csv
 merge_data/*.csv
+model_api/ai_model/*
 /data_extract/__pycache__
 .DS_Store
 crawling_api/__pycache__/*.pyc

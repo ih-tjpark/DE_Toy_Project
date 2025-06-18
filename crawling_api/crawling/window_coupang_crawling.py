@@ -9,7 +9,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
-from crawling.save_data import insert_product_info_to_db, upload_parquet_to_gcs
+from crawling.save_data import insert_product_info_to_db, save_reviews_to_local
 
 # 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
@@ -88,7 +88,7 @@ def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
         return False
 
 # 리뷰 저장 
-def save_reviews_to_parquet(reviews: list, product_code: str) -> None:
+def save_reviews_to_local(reviews: list, product_code: str) -> None:
     dir_name = './review_data'
     
     if not os.path.exists(dir_name):
@@ -247,18 +247,19 @@ def get_product_review(driver: uc.Chrome, product_code):
         return product_list
 
 # 쿠팡 크롤링 전체 파이프라인 
-def coupang_crawling(product_url: str) -> None:
+def coupang_crawling(product_url: str, job_id: str) -> None:
     try:
         driver = setup_driver()
         driver.get(product_url)
-        time.sleep(random.uniform(5, 6))
+        time.sleep(random.uniform(4, 5))
 
         # 상품 기본 정보 추출
         product_dict = get_product_info(driver)
         product_code = str(product_dict['product_code'])
 
         # 로컬에 csv 저장
-        save_product_info_to_csv(product_dict)
+        #save_product_info_to_csv(product_dict)
+        
         # 기본 정보 DB 저장
         insert_product_info_to_db(product_dict)
         
@@ -266,8 +267,9 @@ def coupang_crawling(product_url: str) -> None:
         product_list = get_product_review(driver, product_code)
         
         # 리뷰 저장
-        upload_parquet_to_gcs(product_list,product_code)
-        #save_reviews_to_parquet(product_list, product_code)
+        #upload_parquet_to_gcs(product_list,product_code)
+        save_reviews_to_local(product_list, product_code, job_id)
+        
         print(f'[INFO] {product_code} 리뷰 추출을 완료했습니다.')
     except Exception as e:
         print(f"[ERROR] {product_code} 에러 발생 :", e)

@@ -6,6 +6,22 @@ import pandas as pd
 import os
 
 
+# Local에 parquet형식 리뷰 저장 
+def save_reviews_to_local(reviews: list, product_code: str, job_id: str) -> None:
+    today = datetime.today().strftime("%Y-%m-%d")
+    dir_name = f'review_data/{today}/{job_id}/'
+    
+    if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+    
+    df = pd.DataFrame(reviews)
+    file_path = f"{dir_name}/coupang_review_{product_code}.parquet"
+    df.to_parquet(file_path, engine="pyarrow", index=False)
+    #print(f"[INFO] {product_code} 리뷰가 parquet 파일로 저장되었습니다")
+
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/yourname/keys/my-gcs-service-account.json"
+
 # cloud storage 저장
 """
     GCS에 파일 업로드 함수
@@ -13,28 +29,26 @@ import os
     - source_file_path: 로컬 파일 경로
     - destination_blob_name: GCS 버킷 내 저장 경로
 """
-def upload_parquet_to_gcs(df_list: list, keyword, product_code): 
-    # 날짜 기준 폴더명 생성
+def upload_parquet_to_gcs(job_id: str): 
     today = datetime.today().strftime("%Y-%m-%d")
-
-    # 목적지 경로 구성: 날짜/검색어/review_상품코드.parquet
-    local_path = f"review_data/{today}/{keyword}/"
-    destination_blob_name = f"{local_path}/review_{product_code}.parquet"
-
-    # 로컬 임시 파일로 저장
-    if not os.path.exists(local_path):
-            os.makedirs(local_path)
-    df = pd.DataFrame(df_list)
-    df.to_parquet(destination_blob_name, engine="pyarrow", index=False)
+    local_base_dir = f'review_data/{today}/{job_id}/'
+    bucket_name = 'semi-project-datalake'
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    
+    
+    #  
+    local_dir = os.path.join(local_base_dir, job_id)
 
     # GCS에 업로드
-    storage_client = storage.Client()
-    bucket = storage_client.bucket('kosa-semi-datalake')
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_filename(local_path)
+    for file in os.listdir(local_dir):
+        if file.endswith(".parquet"):
+            local_file_path = os.path.join(local_dir, file)
+            gcs_path = f"{today}/{job_id}/{file}"
 
-    print(f"[INFO] GCS에 저장 완료: gs://kosa-semi-datalake/{destination_blob_name}")
-
+            blob = bucket.blob(gcs_path)
+            blob.upload_from_filename(local_file_path)
+            print(f"[INFO] GCS 업로드 완료: gs://{bucket_name}/{gcs_path}")
 
 
 # db 저장
@@ -66,3 +80,18 @@ def insert_product_info_to_db(product: dict):
         ))
         conn.commit()
         print(f"[INFO] 상품 정보 DB 저장 완료: {product.get('product_code')}")
+
+
+
+def save_product_info_to_csv(product_dict:dict) -> None:
+    dir_name = './product_info_data'
+    
+    if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+    fieldnames = list(product_dict.keys())
+
+    filepath = os.path.join(dir_name, str(product_dict["product_code"])+'.csv')
+    with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()           
+        writer.writerow(product_dict)        

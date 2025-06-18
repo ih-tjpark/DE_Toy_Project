@@ -1,21 +1,16 @@
 from contextlib import asynccontextmanager
-from crawling.window_multi_crawling import crawling_start
+from crawling.window_multi_crawling import crawling_job
+from model.crawl_model import CrawlRequest,crawlResponse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from multiprocessing import Process, Manager, freeze_support
 import uvicorn
 
 
-class CrawlRequest(BaseModel):
-    keyword: str
-    max_links: int
-
-class crawlResponse(BaseModel):
-    message: str
-    status: str
 
 
 
+# app 시작/종료 작업 설정
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     """
@@ -33,18 +28,10 @@ async def lifespan(app:FastAPI):
     print("애플리케이션 종료: Manager 종료")
     if hasattr(app.state, 'manager'):
         app.state.manager.shutdown()
-    
+
+# app 실행
 app = FastAPI(lifespan=lifespan)
 
-
-def crawl_job(keyword: str, max_count: int,is_crawling_running):
-    try:
-        crawling_start(keyword, max_count)
-    except Exception as e:
-        print('[ERROR] 에러가 발생했습니다: ',e)
-    finally:
-        print('크롤링 요청 작업 완료')
-        is_crawling_running.value = False
 
 @app.post("/crawl")
 def start_crawling(req: CrawlRequest):
@@ -61,7 +48,7 @@ def start_crawling(req: CrawlRequest):
         
         is_crawling_running.value = True
         print(f"[INFO] {keyword} 크롤링 작업을 실행합니다.")
-        p = Process(target=crawl_job, args=(keyword, max_links, is_crawling_running))
+        p = Process(target=crawling_job, args=(keyword, max_links, is_crawling_running))
         p.start()
 
         return {"status": "started", "message": f"'{keyword}'에 대한 크롤링 작업을 시작했습니다."}
