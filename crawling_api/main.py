@@ -43,7 +43,7 @@ def crawl_job(keyword: str, max_count: int,is_crawling_running):
     except Exception as e:
         print('[ERROR] 에러가 발생했습니다: ',e)
     finally:
-        print('작업 완료')
+        print('크롤링 요청 작업 완료')
         is_crawling_running.value = False
 
 @app.post("/crawl")

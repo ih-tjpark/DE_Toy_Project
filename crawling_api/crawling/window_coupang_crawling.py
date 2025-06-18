@@ -9,7 +9,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
-from crawling.save_data import insert_product_info
+from crawling.save_data import insert_product_info_to_db
 
 # 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
@@ -58,6 +58,10 @@ def get_star_rating(element: str) -> float:
 def get_num_in_str(element: str) -> int:
     num = int(re.sub(r'[^0-9]', '', element))
     return num
+
+def replace_thumbnail_size(url: str) -> str:
+    
+    return re.sub(r'/remote/[^/]+/image', '/remote/292x292ex/image', url)
 
 # 리뷰 페이지 버튼 동작 컨트롤
 def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
@@ -118,7 +122,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
         product_dict['title'] = title
 
         image_url = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductImage"] img').get_attribute('src')
-        product_dict['image_url'] = image_url
+        product_dict['image_url'] = replace_thumbnail_size(image_url) # type: ignore
 
 
         # 카테고리 추출
@@ -130,22 +134,25 @@ def get_product_info(driver: uc.Chrome) -> dict:
                 #product_dict[f'category{i}'] = categorys[i].text
                 #print('category:',categorys[i].text)
             
-            category_str = '[' + ', '.join(category_list) + ']'
+            category_str = ','.join(category_list)
+            product_dict['tag'] = category_str
         except Exception as e:
             print("[ERROR] 카테고리 추출 실패:",e)
         
         # 상품명 추출
         try:
             name = driver.find_element(By.CSS_SELECTOR, '#itemBrief > table > tbody > tr:nth-child(1) > td:nth-child(2)').text
-            product_dict['name'] = str(category_str + name)
-            #print('name:', name)
+            if "상품" == name[:2]:
+                product_dict['name'] = title
+            else:
+                product_dict['name'] = name
         except NoSuchElementException as e:
             name = ''
             print("[ERROR] 상품명 추출 실패:",e)
         
         # 상품 코드 추출
         product_code = get_product_code(driver.current_url)
-        product_dict['product_code'] = int(product_code[:6])
+        product_dict['product_code'] = int(product_code)
 
 
         # 별점 추출
@@ -178,6 +185,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
         except ValueError:
             product_dict['sales_price'] = 0
             print("[INFO] 할인 전 가격 없음")
+
         # 할인 후 가격 추출
         try:
             final_price = driver.find_element(By.CSS_SELECTOR, 'div.price-amount.final-price-amount').text
@@ -198,7 +206,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
 # 상품 리뷰 추출
 def get_product_review(driver: uc.Chrome, product_code):
     try:
-        print(f"[INFO] {product_code}리뷰 크롤링을 시작합니다.")
+        print(f"[INFO] {product_code} 리뷰 크롤링을 시작합니다.")
 
         # 리뷰 추출
         if check_element_css("#sdpReview article", driver):
@@ -233,7 +241,6 @@ def get_product_review(driver: uc.Chrome, product_code):
             next_page_success = go_next_page(driver, p+1, review_id)
             if not next_page_success:
                 break
-        print("기본정보 추출 완료")
         return product_list
     except:
         print(f"[ERROR] {product_code} 리뷰 추출 실패 :", e)
@@ -253,15 +260,7 @@ def coupang_crawling(product_url: str) -> None:
         # 로컬에 csv 저장
         save_product_info_to_csv(product_dict)
         # 기본 정보 DB 저장
-        # save_to_db(product_dict)
-        conn = psycopg2.connect(
-            host="10.128.0.22",
-            dbname="postgres",
-            user="postgres",
-            password="todn12",
-            port=5432
-        )
-        insert_product_info(conn,product_dict)
+        insert_product_info_to_db(product_dict)
         
         # 상품 리뷰 추출
         product_list = get_product_review(driver, product_code)

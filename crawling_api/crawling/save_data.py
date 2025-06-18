@@ -18,21 +18,24 @@ import psycopg2
 #     print(f"[INFO] GCS에 저장 완료: gs://{bucket_name}/{destination_blob_name}")
 
 
-# conn = psycopg2.connect(
-#     host="YOUR_CLOUDSQL_IP",
-#     dbname="YOUR_DB_NAME",
-#     user="YOUR_USER",
-#     password="YOUR_PASSWORD",
-#     port=5432
-# )
 
-def insert_product_info(conn, product: dict):
+
+def insert_product_info_to_db(product: dict):
+    
+    conn = psycopg2.connect(
+        host="127.0.0.1",
+        dbname="postgres",
+        user="postgres",
+        password="todn12",
+        port=2345
+    )
+
     with conn.cursor() as cur:
         cur.execute("""
             INSERT INTO product 
-                (id, name, rating, review_count, price)
+                (id, name, rating, review_count, price, tag, image_url)
             VALUES 
-                (%s, %s, %s, %s, %s)
+                (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO NOTHING;
         """, (
             product.get("product_code"),
@@ -40,6 +43,8 @@ def insert_product_info(conn, product: dict):
             product.get("star_rating"),
             product.get("review_count"),
             product.get("final_price"),
+            product.get("tag"),
+            product.get("image_url"),
         ))
         conn.commit()
         print(f"[INFO] 상품 정보 DB 저장 완료: {product.get('product_code')}")
