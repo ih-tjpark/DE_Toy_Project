@@ -1,10 +1,12 @@
-review_data/*.parquet
+review_data/*
 product_info_data/*.csv
 merge_data/*.csv
 model_api/ai_model/*
 /data_extract/__pycache__
 .DS_Store
 crawling_api/__pycache__/*.pyc
+crawling_api/key/*
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

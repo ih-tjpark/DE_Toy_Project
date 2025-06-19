@@ -1,8 +1,10 @@
 import pandas as pd
+import psycopg2
 from google.cloud import storage
 from datetime import datetime
 import pandas as pd
 import os
+import csv
 
 
 # Local에 parquet형식 리뷰 저장 
@@ -19,7 +21,7 @@ def save_reviews_to_local(reviews: list, product_code: str, job_id: str) -> None
     #print(f"[INFO] {product_code} 리뷰가 parquet 파일로 저장되었습니다")
 
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/yourname/keys/my-gcs-service-account.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "crawling_api/key/kosa-semi-e79fa479a065.json"
 
 # cloud storage 저장
 """
@@ -30,24 +32,23 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/yourname/keys/my-gcs-serv
 """
 def upload_parquet_to_gcs(job_id: str): 
     today = datetime.today().strftime("%Y-%m-%d")
-    local_base_dir = f'review_data/{today}/{job_id}/'
-    bucket_name = 'semi-project-datalake'
+    dir = f'review_data/{today}/{job_id}/'
+    bucket_name = 'kosa-semi-datalake'
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     
-    
-    #  
-    local_dir = os.path.join(local_base_dir, job_id)
 
     # GCS에 업로드
-    for file in os.listdir(local_dir):
+    for file in os.listdir(dir):
         if file.endswith(".parquet"):
-            local_file_path = os.path.join(local_dir, file)
-            gcs_path = f"{today}/{job_id}/{file}"
+            local_file_path = os.path.join(dir, file)
+            gcs_path = f"{dir}{file}"
 
             blob = bucket.blob(gcs_path)
             blob.upload_from_filename(local_file_path)
             print(f"[INFO] GCS 업로드 완료: gs://{bucket_name}/{gcs_path}")
+    
+    return dir
 
 
 # db 저장

@@ -224,8 +224,9 @@ def get_product_review(driver: uc.Chrome, product_code):
         return product_list
 
 # 쿠팡 크롤링 전체 파이프라인 
-def coupang_crawling(product_url: str, job_id: str) -> None:
+def coupang_crawling(args) -> None:
     try:
+        product_url, job_id = args
         driver = setup_driver()
         driver.get(product_url)
         time.sleep(random.uniform(4, 5))
@@ -238,7 +239,7 @@ def coupang_crawling(product_url: str, job_id: str) -> None:
         #save_product_info_to_csv(product_dict)
         
         # 기본 정보 DB 저장
-        insert_product_info_to_db(product_dict)
+        #insert_product_info_to_db(product_dict)
         
         # 상품 리뷰 추출
         product_list = get_product_review(driver, product_code)
