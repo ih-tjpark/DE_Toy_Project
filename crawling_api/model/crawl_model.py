@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 class CrawlRequest(BaseModel):
     keyword: str
     max_links: int

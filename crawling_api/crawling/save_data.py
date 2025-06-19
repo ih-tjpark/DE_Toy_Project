@@ -1,5 +1,4 @@
 import pandas as pd
-import psycopg2
 from google.cloud import storage
 from datetime import datetime
 import pandas as pd
@@ -82,7 +81,7 @@ def insert_product_info_to_db(product: dict):
         print(f"[INFO] 상품 정보 DB 저장 완료: {product.get('product_code')}")
 
 
-
+# 상품 기본 정보 csv 로컬 저장
 def save_product_info_to_csv(product_dict:dict) -> None:
     dir_name = './product_info_data'
     

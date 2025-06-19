@@ -87,29 +87,6 @@ def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
         #print(f"[INFO] 리뷰 {page_num-1} 페이지 버튼 없음.")
         return False
 
-# 리뷰 저장 
-def save_reviews_to_local(reviews: list, product_code: str) -> None:
-    dir_name = './review_data'
-    
-    if not os.path.exists(dir_name):
-            os.makedirs(dir_name)
-    df = pd.DataFrame(reviews)
-    file_path = f"review_data/coupang_review_{product_code}.parquet"
-    df.to_parquet(file_path, engine="pyarrow", index=False)
-    #print(f"[INFO] {product_code} 리뷰가 parquet 파일로 저장되었습니다")
-
-def save_product_info_to_csv(product_dict:dict) -> None:
-    dir_name = './product_info_data'
-    
-    if not os.path.exists(dir_name):
-            os.makedirs(dir_name)
-    fieldnames = list(product_dict.keys())
-
-    filepath = os.path.join(dir_name, str(product_dict["product_code"])+'.csv')
-    with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()           
-        writer.writerow(product_dict)        
 
 # 상품 기본 정보 추출
 def get_product_info(driver: uc.Chrome) -> dict:

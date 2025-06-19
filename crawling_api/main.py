@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from crawling.window_multi_crawling import crawling_job
 from model.crawl_model import CrawlRequest,crawlResponse
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from multiprocessing import Process, Manager, freeze_support
 import uvicorn
 
