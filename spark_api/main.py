@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from transform.job_pipeline import spark_job_pipeline
 from model.spark_model import JobRequest, JobResponse
 #from spark_job.data_transform import 
 from fastapi import FastAPI, HTTPException
@@ -47,10 +48,10 @@ def start_crawling(req: JobRequest):
         
         is_running.value = True
         print(f"[INFO] {job_id} 데이터 처리 작업을 실행합니다.")
-        p = Process(target=crawling_job, args=(keyword, max_links, is_running))
+        p = Process(target=spark_job_pipeline, args=(gcs_dir, is_running))
         p.start()
 
-        return {"status": "started", "message": f"'{keyword}'에 대한 크롤링 작업을 시작했습니다."}
+        return {"status": "started", "message": f"'{job_id}'에 대한 데이터 처리 작업을 시작했습니다."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
