@@ -3,9 +3,11 @@ import json
 
 def load_data_from_gcs(spark, dir):
     # GCS 경로 지정
-    gcs_path = f"gs://{dir}"
+    # 주소 예시 'gs://kosa-semi-datalake/review_data/2025-06-19/job_20250619_155501/*.parquet'
+    # dir = review_data/2025-06-19/job_20250619_155501/
+    bucket = 'kosa-semi-datalake'
+    gcs_path = f"gs://{bucket}/{dir}*.parquet"
 
-    #path  = "gs://kosa-semi-datalake/review_data/2025-06-19/job_20250619_104636/coupang_review_7910702026.parquet"
     # 파일 읽기
     df = spark.read.parquet(gcs_path)
     
@@ -23,8 +25,6 @@ def save_analysis_to_postgresql(
     sentiment_negative: list
 ):
     try:
-        print(json.dumps(sentiment_positive, ensure_ascii=False))
-        product_id= 5225707661
         conn = psycopg2.connect(
             host="127.0.0.1",
             dbname="postgres",
@@ -57,7 +57,7 @@ def save_analysis_to_postgresql(
         ))
 
         conn.commit()
-        print(f"[INFO] '{product_id}' 분석 결과 저장 완료")
+        print(f"[INFO] '{product_id}' 분석 결과 저장 완료했습니다.")
 
     except Exception as e:
         print(f"[ERROR] PostgreSQL 저장 실패: {e}")
