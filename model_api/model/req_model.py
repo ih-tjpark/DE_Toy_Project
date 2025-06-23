@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 class JobRequest(BaseModel):
-    product_code: str
+    product_code : str
     reviews: list
     
 
