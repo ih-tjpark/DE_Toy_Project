@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from transform.job_pipeline import spark_job_pipeline, add_path
 from model.spark_model import JobRequest, JobResponse
 #from spark_job.data_transform import 
 from fastapi import FastAPI, HTTPException
@@ -21,6 +22,8 @@ async def lifespan(app:FastAPI):
     app.state.manager = Manager()
     app.state.is_running = app.state.manager.Value('b', False)
     #print(f"초기 is_running.value: {app.state.is_running.value}")
+
+    add_path()
     
     yield # yield 이전 코드는 fastapi시작할 때 실행됨 / 이후 코드는 종료될 때 실행
     
@@ -37,8 +40,8 @@ def start_crawling(req: JobRequest):
     try:
         gcs_dir = req.dir
         is_running = app.state.is_running
-        job_id = gcs_dir.split('/')[-1]
-        print(f"[INFO] 수신된 작업 ID: {job_id}")
+        
+        print(f"[INFO] 수신된 작업 dir: {gcs_dir}")
 
         # 상태를 True로 설정하고 새 프로세스 실행
         if is_running.value == True:
@@ -46,11 +49,11 @@ def start_crawling(req: JobRequest):
             return {"status": "processing", "message": "작업이 이미 실행 중입니다."}
         
         is_running.value = True
-        print(f"[INFO] {job_id} 데이터 처리 작업을 실행합니다.")
-        p = Process(target=crawling_job, args=(keyword, max_links, is_running))
+        print(f"[INFO] {gcs_dir} 데이터 처리 작업을 실행합니다.")
+        p = Process(target=spark_job_pipeline, args=(gcs_dir, is_running))
         p.start()
 
-        return {"status": "started", "message": f"'{keyword}'에 대한 크롤링 작업을 시작했습니다."}
+        return {"status": "started", "message": f"'{gcs_dir}'에 대한 데이터 처리 작업을 시작했습니다."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
