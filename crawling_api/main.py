@@ -5,7 +5,8 @@ from fastapi import FastAPI, HTTPException
 from multiprocessing import Process, Manager, freeze_support
 import uvicorn
 
-
+import logging
+logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
 
 
 
