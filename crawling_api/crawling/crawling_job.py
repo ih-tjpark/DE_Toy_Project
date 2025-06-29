@@ -9,7 +9,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
-from crawling.save_data import insert_product_info_to_db, save_reviews_to_local
+from crawling_api.crawling.data_access import insert_product_info_to_db, save_reviews_to_local
 
 # 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
@@ -119,7 +119,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
         # 상품명 추출
         try:
             name = driver.find_element(By.CSS_SELECTOR, '#itemBrief > table > tbody > tr:nth-child(1) > td:nth-child(2)').text
-            if "상품" == name[:2] or "컨텐츠" == name[:3]:
+            if "상품" == name[:2]:
                 product_dict['name'] = title
             else:
                 product_dict['name'] = name
@@ -161,7 +161,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
             product_dict['sales_price'] = 0
         except ValueError:
             product_dict['sales_price'] = 0
-            #print("[INFO] 할인 전 가격 없음")
+            print("[INFO] 할인 전 가격 없음")
 
         # 할인 후 가격 추출
         try:
@@ -197,21 +197,19 @@ def get_product_review(driver: uc.Chrome, product_code):
                 articles = driver.find_elements(By.CSS_SELECTOR, f"#{review_id} article")
 
                 for article in articles:
-                    review_writer = article.find_element(By.CSS_SELECTOR, 'div.sdp-review__article__list__info__user span').text
                     review_rating = article.find_element(By.CSS_SELECTOR, '[data-rating]').get_attribute("data-rating")
                     review_date = article.find_element(By.CSS_SELECTOR, 'div.sdp-review__article__list__info__product-info__reg-date').text
                     review_content = article.find_element(By.CSS_SELECTOR, 'div.sdp-review__article__list__review__content').text
                     #print(f" 별점:{rating} /  등록 날짜:{date} / 내용: {content[:50]}")
                 
                     product_list.append({
-                        'product_code':product_code,
-                        'review_writer': review_writer,
+                        'product_code':product_code, 
                         'review_rating':review_rating, 
                         'review_date':review_date, 
                         'review_content':review_content
                         })
             except NoSuchElementException:
-                #print(f"[INFO] {product_code}리뷰가 없음:")
+                print(f"[INFO] {product_code}리뷰가 없음:")
                 continue
             except Exception as e:
                 print(f"[INFO] {product_code}리뷰 추출 실패:", e)
@@ -241,7 +239,7 @@ def coupang_crawling(args) -> None:
         #save_product_info_to_csv(product_dict)
         
         # 기본 정보 DB 저장
-        insert_product_info_to_db(product_dict)
+        #insert_product_info_to_db(product_dict)
         
         # 상품 리뷰 추출
         product_list = get_product_review(driver, product_code)

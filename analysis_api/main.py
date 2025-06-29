@@ -1,9 +1,8 @@
 from contextlib import asynccontextmanager
-from model.req_model import JobRequest
-from analyze.analyze_pipeline import analyze_job
+from analysis_api.model.analysis_model import JobRequest
+from analysis.analysis_pipeline import analyze_job
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from multiprocessing import Process, Manager, freeze_support
+from multiprocessing import Manager, freeze_support
 import uvicorn
 
 

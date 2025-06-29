@@ -1,4 +1,4 @@
-from analyze.text_analyze import summary_analyze, sentiment_analyze
+from analysis.analysis_job import summary_analyze, sentiment_analyze
 import gc
 
 

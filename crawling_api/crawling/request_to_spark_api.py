@@ -1,8 +1,8 @@
 import requests
 
-def notify_spark_server(dir: str):
-    spark_server_url = "http://10.128.0.11:8000/start-processing"
-    payload = {"dir": dir}
+def notify_spark_server(job_id: str):
+    spark_server_url = "http://<spark_server_ip>:<port>/start-processing"
+    payload = {"job_id": job_id}
 
     try:
         response = requests.post(spark_server_url, json=payload, timeout=10)

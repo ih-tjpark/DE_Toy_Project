@@ -1,9 +1,8 @@
-from crawling.window_coupang_crawling import coupang_crawling, get_product_links
+from crawling.crawling_job import coupang_crawling, get_product_links
 from multiprocessing import Pool, cpu_count, freeze_support
-from crawling.save_data import upload_parquet_to_gcs
-from crawling.request_data_transform import notify_spark_server
+from crawling_api.crawling.data_access import upload_parquet_to_gcs
+from crawling_api.crawling.request_to_spark_api import notify_spark_server
 from datetime import datetime
-import requests
 
 def generate_job_id():
     now = datetime.now()
@@ -35,9 +34,10 @@ def crawling_job(keyword: str, max_link: int, is_crawling_running: bool ) -> Non
             print('[ERROR] 리뷰 데이터 저장을 실패했습니다.: ', e)
             
         # spark server 작업 완료 알람
-        notify_spark_server(storage_dir)
+        #notify_spark_server(storage_dir)
+        
 
-        print(f'[INFO] {job_id} 크롤링 요청 작업 완료')
+        print('[INFO] 크롤링 요청 작업 완료')
     except Exception as e:
         print(f'[ERROR] {job_id} 작업 중 에러가 발생했습니다: ',e)
     finally:
