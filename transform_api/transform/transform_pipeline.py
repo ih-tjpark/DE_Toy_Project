@@ -11,7 +11,7 @@ def add_path():
         sys.path.append(project_root)
     os.environ["PYTHONPATH"] = project_root
 
-def spark_job_pipeline(gcs_dir, is_running):
+def transform_run(gcs_dir, is_running):
 
 
     # Spark app 생성

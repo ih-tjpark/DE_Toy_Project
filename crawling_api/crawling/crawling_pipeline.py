@@ -17,7 +17,7 @@ def run_multi_process(url_list: list, job_id: str) -> None:
         pool.map(coupang_crawling, zip(url_list, job_ids))
 
 # 전체 파이프라인
-def crawling_job(keyword: str, max_link: int, is_crawling_running: bool ) -> None:
+def crawling_run(keyword: str, max_link: int, is_crawling_running: bool ) -> None:
     try:
         freeze_support()
         job_id = generate_job_id()

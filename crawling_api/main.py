@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
-from crawling.window_multi_crawling import crawling_job
-from model.crawl_model import CrawlRequest,crawlResponse
+from crawling.crawling_pipeline import crawling_run
+from model.crawling_model import CrawlRequest,crawlResponse
 from fastapi import FastAPI, HTTPException
 from multiprocessing import Process, Manager, freeze_support
 import uvicorn
@@ -48,7 +48,7 @@ def start_crawling(req: CrawlRequest):
         
         is_crawling_running.value = True
         print(f"[INFO] {keyword} 크롤링 작업을 실행합니다.")
-        p = Process(target=crawling_job, args=(keyword, max_links, is_crawling_running))
+        p = Process(target=crawling_run, args=(keyword, max_links, is_crawling_running))
         p.start()
 
         return {"status": "started", "message": f"'{keyword}'에 대한 크롤링 작업을 시작했습니다."}

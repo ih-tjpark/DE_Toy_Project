@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from transform_api.transform.transform_pipeline import spark_job_pipeline, add_path
+from transform_api.transform.transform_pipeline import transform_run, add_path
 from model.spark_model import JobRequest, JobResponse
 #from spark_job.data_transform import 
 from fastapi import FastAPI, HTTPException
@@ -50,7 +50,7 @@ def start_crawling(req: JobRequest):
         
         is_running.value = True
         print(f"[INFO] {gcs_dir} 데이터 처리 작업을 실행합니다.")
-        p = Process(target=spark_job_pipeline, args=(gcs_dir, is_running))
+        p = Process(target=transform_run, args=(gcs_dir, is_running))
         p.start()
 
         return {"status": "started", "message": f"'{gcs_dir}'에 대한 데이터 처리 작업을 시작했습니다."}

@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from analysis_api.model.analysis_model import JobRequest
-from analysis.analysis_pipeline import analyze_job
+from analysis.analysis_pipeline import analyze_run
 from fastapi import FastAPI, HTTPException
 from multiprocessing import Manager, freeze_support
 import uvicorn
@@ -48,7 +48,7 @@ def start_crawling(req: JobRequest):
         is_running.value = True
         print(f"[INFO] 분석 작업을 실행합니다.")
 
-        summary, sentiment = analyze_job(reviews, is_running)
+        summary, sentiment = analyze_run(reviews, is_running)
         payload = {
             "summary" : summary,
             "sentiment" : sentiment,

@@ -2,7 +2,7 @@ from analysis.analysis_job import summary_analyze, sentiment_analyze
 import gc
 
 
-def analyze_job(reviews: str ,is_running: bool):
+def analyze_run(reviews: str ,is_running: bool):
     try:
         summary_texts = summary_analyze(reviews)
         print("[INFO] 요약 분석 완료")
