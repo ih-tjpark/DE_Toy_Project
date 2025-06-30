@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from transform_api.transform.transform_pipeline import transform_run, add_path
-from model.spark_model import JobRequest, JobResponse
+from transform_api.model.transform_model import JobRequest, JobResponse
 #from spark_job.data_transform import 
 from fastapi import FastAPI, HTTPException
 from multiprocessing import Process, Manager, freeze_support

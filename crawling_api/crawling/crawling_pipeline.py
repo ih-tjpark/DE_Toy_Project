@@ -1,7 +1,7 @@
 from crawling.crawling_job import coupang_crawling, get_product_links
 from multiprocessing import Pool, cpu_count, freeze_support
 from crawling_api.crawling.data_access import upload_parquet_to_gcs
-from crawling_api.crawling.request_to_spark_api import notify_spark_server
+from crawling_api.crawling.request_to_transform_api import notify_spark_server
 from datetime import datetime
 
 def generate_job_id():
