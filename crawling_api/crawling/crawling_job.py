@@ -9,7 +9,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from fake_useragent import UserAgent
-from crawling_api.crawling.data_access import insert_product_info_to_db, save_reviews_to_local
+from crawling.data_access import insert_product_info_to_db, save_reviews_to_local
 
 # 크롬 드라이버 셋팅
 def setup_driver() -> uc.Chrome:
@@ -59,6 +59,7 @@ def get_num_in_str(element: str) -> int:
     num = int(re.sub(r'[^0-9]', '', element))
     return num
 
+# 이미지 사이즈 변경
 def replace_thumbnail_size(url: str) -> str:
     
     return re.sub(r'/remote/[^/]+/image', '/remote/292x292ex/image', url)
@@ -79,7 +80,7 @@ def go_next_page(driver: uc.Chrome , page_num: int, review_id: str) -> bool:
             time.sleep(0.5)
 
         page_buttons.click()                               
-        time.sleep(random.uniform(2,3))
+        time.sleep(random.uniform(0.5,1.5))
         #print(f"[INFO] {product_code} 리뷰 {page_num-1} 페이지 이동")
         return True
     
@@ -94,18 +95,20 @@ def get_product_info(driver: uc.Chrome) -> dict:
         product_dict = dict()
         
         # 상품 판매 제목
-        
-        title = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductTitle"]').text
+        title = driver.find_element(By.CSS_SELECTOR, 'h1.product-title').text
         product_dict['title'] = title
 
-        image_url = driver.find_element(By.CSS_SELECTOR, '[data-sentry-component="ProductImage"] img').get_attribute('src')
+        image_url = driver.find_element(By.CSS_SELECTOR, 'div.product-image img').get_attribute('src')
         product_dict['image_url'] = replace_thumbnail_size(image_url) # type: ignore
-
 
         # 카테고리 추출
         try:
-            categorys = driver.find_elements(By.CSS_SELECTOR, '[data-sentry-component="Breadcrumb"] a')
+            categorys = driver.find_elements(By.CSS_SELECTOR, 'ul.breadcrumb li')
+
+            if not categorys:
+                raise ValueError("카테고리 요소 없음")  # 강제로 예외 발생시켜 처리
             category_list = []
+            
             for i in range(1, len(categorys)):
                 category_list.append(categorys[i].text) 
                 #product_dict[f'category{i}'] = categorys[i].text
@@ -115,6 +118,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
             product_dict['tag'] = category_str
         except Exception as e:
             print("[ERROR] 카테고리 추출 실패:",e)
+
         
         # 상품명 추출
         try:
@@ -161,7 +165,7 @@ def get_product_info(driver: uc.Chrome) -> dict:
             product_dict['sales_price'] = 0
         except ValueError:
             product_dict['sales_price'] = 0
-            print("[INFO] 할인 전 가격 없음")
+            #print("[INFO] 할인 전 가격 없음")
 
         # 할인 후 가격 추출
         try:
@@ -219,7 +223,7 @@ def get_product_review(driver: uc.Chrome, product_code):
             if not next_page_success:
                 break
         return product_list
-    except:
+    except Exception as e:
         print(f"[ERROR] {product_code} 리뷰 추출 실패 :", e)
         return product_list
 
@@ -229,7 +233,7 @@ def coupang_crawling(args) -> None:
         product_url, job_id = args
         driver = setup_driver()
         driver.get(product_url)
-        time.sleep(random.uniform(4, 5))
+        time.sleep(random.uniform(2, 3))
 
         # 상품 기본 정보 추출
         product_dict = get_product_info(driver)
@@ -261,7 +265,7 @@ def get_product_links(keyword: str, max_links: int) -> list:
     driver = setup_driver()
     search_url = f"https://www.coupang.com/np/search?component=&q={keyword}"
     driver.get(search_url)
-    time.sleep(random.uniform(3, 4))
+    time.sleep(random.uniform(2, 3))
 
     links = []
     duplicate_chk = set()
@@ -296,20 +300,23 @@ def get_product_links(keyword: str, max_links: int) -> list:
             #     origin_price = item.find_element(By.TAG_NAME, 'del').text
             # except NoSuchElementException:
             #     origin_price = 0
-            # 상품 별점, 리뷰 수
+            
+            # 리뷰 수 추출
             try:
-                product_info = item.find_elements(By.CSS_SELECTOR, '[data-sentry-component="ProductRating"] span')
+                # class 속성에 특정 문자열 포함 조건
+                review_count = driver.find_element(By.XPATH, '//span[contains(@class, "ProductRating_ratingCount")]')
+                review_count = get_num_in_str(review_count.text)
             except NoSuchElementException:
-                star_rating = 0
+                print("[INFO] 리뷰 수 데이터를 찾지 못했습니다.")
+
                 review_count = 0
+            #product-list > li:nth-child(1) > a > div > div.ProductRating_productRating__jjf7W > span.ProductRating_ratingCount__R0Vhz
+            
+            # 별점 추출
             # try:
             #     star_rating = product_info[0].find_element(By.CSS_SELECTOR, 'div').text
             # except NoSuchElementException:
             #     star_rating = 0
-            try:
-                review_count = get_num_in_str(product_info[1].text)
-            except:
-                review_count = 0
             
             # 특정 개수 이상의 리뷰가 있는 상품만 가져오기
             if review_count >= 200:
